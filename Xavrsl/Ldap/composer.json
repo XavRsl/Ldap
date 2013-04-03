@@ -1,10 +1,10 @@
 {
-    "name": "illuminate/redis",
+    "name": "xavrsl/ldap",
     "keywords": ["laravel"],
     "authors": [
         {
-            "name": "Taylor Otwell",
-            "email": "taylorotwell@gmail.com"
+            "name": "Xavier Roussel",
+            "email": "roussel.xavier@gmail.com"
         }
     ],
     "require": {
@@ -16,10 +16,10 @@
     },
     "autoload": {
         "psr-0": {
-            "Illuminate\\Redis": ""
+            "Xavrsl\\Ldap": ""
         }
     },
-    "target-dir": "Illuminate/Redis",
+    "target-dir": "Xavrsl/Ldap",
     "extra": {
         "branch-alias": {
             "dev-master": "4.0-dev"
