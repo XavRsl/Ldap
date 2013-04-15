@@ -1,0 +1,23 @@
+{
+    "name": "xavrsl/ldap",
+    "description": "",
+    "authors": [
+        {
+            "name": "Xavier Roussel",
+            "email": "roussel.xavier@uvsq.fr"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "illuminate/support": "4.0.x"
+    },
+    "autoload": {
+        "classmap": [
+            "src/migrations"
+        ],
+        "psr-0": {
+            "Xavrsl\\Ldap": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}
