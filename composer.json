@@ -1,6 +1,7 @@
 {
     "name": "xavrsl/ldap",
-    "description": "",
+    "description": "Add Ldap Search possibilities to Laravel",
+    "keywords": ["laravel", "ldap", "search"],
     "authors": [
         {
             "name": "Xavier Roussel",
@@ -12,9 +13,6 @@
         "illuminate/support": "4.0.x"
     },
     "autoload": {
-        "classmap": [
-            "src/migrations"
-        ],
         "psr-0": {
             "Xavrsl\\Ldap": "src/"
         }
