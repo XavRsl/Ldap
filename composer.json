@@ -2,6 +2,7 @@
     "name": "xavrsl/ldap",
     "description": "Add Ldap Search possibilities to Laravel",
     "keywords": ["laravel", "ldap", "search"],
+		"license": "MIT",
     "authors": [
         {
             "name": "Xavier Roussel",
