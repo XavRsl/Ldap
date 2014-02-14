@@ -264,7 +264,7 @@ class Directory {
 				if($this->instore($u)) {
 					$user = $this->getstore($u);
 					foreach($this->attributes as $a){
-						$output[$u][$a] = $user[$a];
+						$output[$u][$a] = $user[$a][0];
 					}
 				}
 			}
