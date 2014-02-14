@@ -73,7 +73,7 @@ class Directory {
 	{
 		if ( ! is_null($this->connection)) return $this->connection;
 
-		$this->connection = ldap_connect($this->config['server'], $this->config['port']);		
+		$this->connection = ldap_connect($this->config['server'], $this->config['port']);
 
 		if ($this->connection === false)
 		{
@@ -93,18 +93,27 @@ class Directory {
 	{
 		if ( ! is_null($this->binded)) return $this->binded;
 
-		$this->binded = ldap_bind($this->connection, $this->config['binddn'], $this->bindpwd);		
+		$this->binded = ldap_bind($this->connection, $this->config['binddn'], $this->bindpwd);
 
 		if ($this->binded === false)
-		{ 
+		{
 			throw new \Exception("Can't bind to the Ldap server with these credentials.");
 		}
 	}
 
-	public function query($method, $arguments) 
+	public function query($method, $arguments)
 	{
 		if ($method == 'people') {
-			return $this->peopleQuery($arguments[0]);
+			if (is_array($arguments)) {
+				$arguments = implode(',', $arguments);
+			}
+			return $this->peopleQuery($arguments);
+		}
+		elseif ($method == 'auth') {
+			if (count($arguments) !== 2) {
+				throw new \Exception ('Auth takes Userid and Password as parameters');
+			}
+			return $this->auth($arguments[0], $arguments[1]);
 		}
 		else {
 			throw new \Exception("This function is not implemented (Yet ?).");
@@ -113,10 +122,10 @@ class Directory {
 
 	/**
 	 * Get users from LDAP
-	 * 
+	 *
 	 * @param string|array $usernames
 	 */
-	protected function peopleQuery($usernames = '*') 
+	protected function peopleQuery($usernames = '*')
 	{
 		//Who are we looking for ??
 		if (is_string($usernames)) {
@@ -128,7 +137,7 @@ class Directory {
 			else {
 				$usernames = explode(',', $usernames);
 			}
-		} 
+		}
 
 		$this->usernames = $usernames;
 		$this->attributes = array();
@@ -137,18 +146,41 @@ class Directory {
 
 		return $this;
 	}
+	public function auth($userid, $password)
+	{
+		// Prevent null binding
+		if ($userid === null || $password === null) {
+			return false;
+		}
+		if (empty($userid) || empty($password)) {
+			return false;
+		}
+		//get user details (and cache it) using peoplequery. This uses admin credentials
+		$this->peopleQuery($userid);
+		//try to bind user dn with user credentials
+		try {
+			$user = $this->getstore($userid);
+			return ldap_bind($this->connection, $user[$this->config['userdn']], $password);
+		} catch (\Exception $e) {
+			return false;
+		}
+	}
 
-	public function __get($attribute) 
+	public function __get($attribute)
 	{
 		// What are we looking for ?
 		$this->attributes[] = $attribute;
 		return $this->output();
 	}
 
-	public function get($attributes) 
+	public function get($attributes=null)
 	{
+		//if no attributes are supplied, use all in config attributes setting
+		if ($attributes === null) {
+			$this->attributes = $this->config['attributes'];
+		}
 		// What are we looking for ?
-		if (is_string($attributes)) {
+		elseif (is_string($attributes)) {
 			if (strpos($attributes, ',')) {
 				$attributes = explode(',', $attributes);
 				array_walk($attributes, create_function('&$value', '$value = trim($value);'));
@@ -162,10 +194,6 @@ class Directory {
 		return $this->output();
 	}
 
-	public function find($term)
-	{
-		
-	}
 
 	private function strip() {
 		$striped = array();
@@ -195,17 +223,18 @@ class Directory {
 		$filter .= ')';
 
 		$attributes = $this->config['attributes'];
+		$key = $this->config['key'];
 
 		$sr = ldap_search($this->connection, $peopledn, $filter, $attributes);
 		// return an array of CNs
-		$results = ldap_get_entries($this->connection, $sr); 
+		$results = ldap_get_entries($this->connection, $sr);
 		for($i = 0; $i < $results['count']; $i++) {
-			$this->store($results[0]['login'][0], $results[0]);
+			$this->store($results[$i][$key][0], $results[0]);
 		}
 	}
 
 	private function store($key, $value = '') {
-		\Cache::put($key, $value, 20);
+		\Cache::put($key, $value, $this->config['cachettl']);
 		$this->results[$key] = $value;
 	}
 
@@ -218,7 +247,7 @@ class Directory {
 	}
 
 	/**
-	 * Output the finilized result 
+	 * Output the finilized result
 	 *
 	 * @var array $data
 	 */
@@ -235,7 +264,7 @@ class Directory {
 				if($this->instore($u)) {
 					$user = $this->getstore($u);
 					foreach($this->attributes as $a){
-						$output[$u][$a] = $user[$a];
+						$output[$u][$a] = $user[$a][0];
 					}
 				}
 			}

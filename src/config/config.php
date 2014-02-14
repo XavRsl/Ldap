@@ -8,12 +8,9 @@ return array(
 		| LDAP Server
 		|--------------------------------------------------------------------------
 		|
-		| Laravel uses a flexible driver-based system to handle authentication.
-		| You are free to register your own drivers using the Auth::extend
-		| method. Of course, a few great drivers are provided out of
-		| box to handle basic authentication simply and easily.
+		| Address of the LDAP Server
 		|
-		| Exemple: 'cas.myuniv.edu'.
+		| Example: 'cas.myuniv.edu'.
 		|
 		*/
 
@@ -21,13 +18,8 @@ return array(
 
 		/*
 		|--------------------------------------------------------------------------
-		| LDAP Port
+		| LDAP Port (389 is default)
 		|--------------------------------------------------------------------------
-		|
-		| Here you may specify the database column that should be considered the
-		| "username" for your users. Typically, this will either be "username"
-		| or "email". Of course, you're free to change the value to anything.
-		|
 		*/
 
 		'port' => '389',
@@ -36,39 +28,51 @@ return array(
 		|--------------------------------------------------------------------------
 		| LDAP Base DN
 		|--------------------------------------------------------------------------
-		|
-		| Here you may specify the database column that should be considered the
-		| "password" for your users. Typically, this will be "password" but, 
-		| again, you're free to change the value to anything you see fit.
-		|
 		*/
 
 		'peopledn' => 'ou=People,dc=domain,dc=fr',
 
 		/*
 		|--------------------------------------------------------------------------
-		| LDAP bind DN
+		| LDAP ADMIN bind DN
 		|--------------------------------------------------------------------------
-		|
-		| When using the "eloquent" authentication driver, you may specify the
-		| model that should be considered the "User" model. This model will
-		| be used to authenticate and load the users of your application.
-		|
 		*/
 
 		'binddn' => 'cn=Manager,dc=domain,dc=fr',
 
 		/*
 		|--------------------------------------------------------------------------
-		| LDAP bind password
+		| LDAP ADMIN bind password
 		|--------------------------------------------------------------------------
-		|
-		| When using the "fluent" authentication driver, the database table used
-		| to load users may be specified here. This table will be used in by
-		| the fluent query builder to authenticate and load your users.
 		|
 		*/
 		'bindpwd' => 'password',
+
+		/*
+		|--------------------------------------------------------------------------
+		| cache time-to-live value in minutes. How long should we cache result if found
+		|--------------------------------------------------------------------------
+		*/
+
+		'cachettl'   => 20,
+
+		/*
+		|--------------------------------------------------------------------------
+		| caching key. This is typically a unique userid allotted to resources in ldap
+		|--------------------------------------------------------------------------
+		*/
+
+		'key'        => 'uid',
+
+		/*
+		|--------------------------------------------------------------------------
+		| userdn used for user authentication. This is the distinguished name
+		| of a user that will authenticate to the directory using a BIND. Typically named 'dn'
+		|--------------------------------------------------------------------------
+		*/
+
+		'userdn'     => 'dn',
+
 		'basefilter' => '(login=%uid)',
 		'searchscope' => 'SUBTREE_SCOPE',
 		'attributes' => array("displayname", "sn", "givenname", "mail", 'edupersonaffiliation', 'supannaffectation', 'login'),
