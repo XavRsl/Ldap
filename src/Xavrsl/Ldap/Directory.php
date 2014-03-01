@@ -264,7 +264,7 @@ class Directory {
 				if($this->instore($u)) {
 					$user = $this->getstore($u);
 					foreach($this->attributes as $a){
-						$output[$u][$a] = $user[$a][0];
+						$output[$u][$a] = array_key_exists($a, $user) ? $user[$a][0] : null;
 					}
 				}
 			}
