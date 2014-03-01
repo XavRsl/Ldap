@@ -229,7 +229,7 @@ class Directory {
 		// return an array of CNs
 		$results = ldap_get_entries($this->connection, $sr);
 		for($i = 0; $i < $results['count']; $i++) {
-			$this->store($results[$i][$key][0], $results[0]);
+			$this->store($results[$i][$key][0], $results[$i]);
 		}
 	}
 
