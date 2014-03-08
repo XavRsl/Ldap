@@ -229,7 +229,7 @@ class Directory {
 		// return an array of CNs
 		$results = ldap_get_entries($this->connection, $sr);
 		for($i = 0; $i < $results['count']; $i++) {
-			$this->store($results[$i][$key][0], $results[0]);
+			$this->store($results[$i][$key][0], $results[$i]);
 		}
 	}
 
@@ -264,7 +264,7 @@ class Directory {
 				if($this->instore($u)) {
 					$user = $this->getstore($u);
 					foreach($this->attributes as $a){
-						$output[$u][$a] = $user[$a][0];
+						$output[$u][$a] = array_key_exists($a, $user) ? $user[$a][0] : null;
 					}
 				}
 			}
