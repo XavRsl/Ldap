@@ -38,11 +38,11 @@ class Directory {
 	protected $results;
 
 	/**
-	 * Current Usernames
+	 * Requested entries
 	 *
 	 * @var array
 	 */
-	protected $usernames;
+	protected $requestedEntries;
 
 	/**
 	 * Current Attributes
@@ -73,11 +73,12 @@ class Directory {
 	{
 		if ( ! is_null($this->connection)) return $this->connection;
 
-		$this->connection = ldap_connect($this->config['server'], $this->config['port']);
+		$server = $this->getConfig('server');
+		$this->connection = ldap_connect($server, $this->getConfig('port'));
 
 		if ($this->connection === false)
 		{
-			throw new \Exception("Connection to Ldap server {$this->server} impossible.");
+			throw new \Exception("Connection to Ldap server {$server} impossible.");
 		}
 
 		ldap_set_option($this->connection, LDAP_OPT_PROTOCOL_VERSION, 3);
@@ -93,7 +94,7 @@ class Directory {
 	{
 		if ( ! is_null($this->binded)) return $this->binded;
 
-		$this->binded = ldap_bind($this->connection, $this->config['binddn'], $this->bindpwd);
+		$this->binded = ldap_bind($this->connection, $this->getConfig('binddn'), $this->bindpwd);
 
 		if ($this->binded === false)
 		{
@@ -101,19 +102,20 @@ class Directory {
 		}
 	}
 
-	public function query($method, $arguments)
+	public function query($method, $parameters)
 	{
 		if ($method == 'people') {
-			if (is_array($arguments)) {
-				$arguments = implode(',', $arguments);
+			if (count($parameters) !== 1) {
+				throw new \Exception('People method expecting only one parameter (can be an array)');
 			}
-			return $this->peopleQuery($arguments);
+			$this->setRequestedEntries($parameters[0]);
+			return $this;
 		}
 		elseif ($method == 'auth') {
-			if (count($arguments) !== 2) {
-				throw new \Exception ('Auth takes Userid and Password as parameters');
+			if (count($parameters) !== 2) {
+				throw new \Exception('Auth takes Userid and Password as parameters');
 			}
-			return $this->auth($arguments[0], $arguments[1]);
+			return $this->auth($parameters[0], $parameters[1]);
 		}
 		else {
 			throw new \Exception("This function is not implemented (Yet ?).");
@@ -121,31 +123,56 @@ class Directory {
 	}
 
 	/**
-	 * Get users from LDAP
+	 * Set the requested entries list
 	 *
-	 * @param string|array $usernames
-	 */
-	protected function peopleQuery($usernames = '*')
+	 * @param array  $searchArray
+	 **/
+	protected function setRequestedEntries($searchArray)
 	{
-		//Who are we looking for ??
-		if (is_string($usernames)) {
-			// $usernames is * => don't want that
-			if ($usernames == '*') {
-				throw new \Exception("Can't walk through the entire LDAP at once...");
-			}
-			// $usernames is a string, convert it to an array
-			else {
-				$usernames = explode(',', $usernames);
-			}
+		$searchArray = $this->getParameters($searchArray);
+
+		if ($this->checkWildcards($searchArray))
+		{
+			throw new \Exception('Wildcards (*) are not usable right now...');
 		}
 
-		$this->usernames = $usernames;
-		$this->attributes = array();
-
-		$this->strip();
-
-		return $this;
+		// Fill an array containing the list of the entries we are looking for
+		$this->requestedEntries = $searchArray;
 	}
+
+	/**
+	 * Get requested parameters as an array.
+	 *
+	 * @param string|array  $parameters
+	 * @return array
+	 **/
+	protected function getParameters($parameters)
+	{
+		// People identifiers can be given as string ('xavrsl'), as string containing
+		// multiple identifiers ('xavrsl, jeanmich') or as an array (['xavrsl', 'jeanmich'])
+		// Let's turn everything into a array
+		if (is_string($parameters)) {
+			return preg_split('/, ?/', $parameters);
+		}
+
+		return $parameters;
+	}
+
+	/**
+	 * Look for wildcards in parameters
+	 *
+	 * @param array  $parameters
+	 * @return boolean
+	 **/
+	protected function checkWildcards($parameters)
+	{
+		foreach($parameters as $parameter)
+		{
+			if(strpos($parameter, '*')) return true;
+		}
+		return false;
+	}
+
 	public function auth($userid, $password)
 	{
 		// Prevent null binding
@@ -168,46 +195,97 @@ class Directory {
 
 	public function __get($attribute)
 	{
-		// What are we looking for ?
-		$this->attributes[] = $attribute;
-		return $this->output();
+		return $this->get($attribute);
 	}
 
-	public function get($attributes=null)
+	/**
+	 * Get Ldap attributes and make the search
+	 *
+	 * @param string|array  $usernames
+	 * @return mixed
+	 */
+	public function get($attributes = null)
 	{
-		//if no attributes are supplied, use all in config attributes setting
+		$cachedEntries = $this->getEntriesFromCache();
+
+		if(!empty($cachedEntries))
+			$directoryEntries = $this->getEntriesFromDirectory($cachedEntries);
+
+		// if no attributes are supplied, use all from config 'attributes' setting
 		if ($attributes === null) {
-			$this->attributes = $this->config['attributes'];
+			$this->attributes = $this->getConfigAttributes();
 		}
-		// What are we looking for ?
-		elseif (is_string($attributes)) {
-			if (strpos($attributes, ',')) {
-				$attributes = explode(',', $attributes);
-				array_walk($attributes, create_function('&$value', '$value = trim($value);'));
-				return $this->get($attributes);
-			}
-			return $this->$attributes;
-		}
-		elseif (is_array($attributes)) {
-			$this->attributes = $attributes;
+		else {
+			$this->attributes = $this->getParameters($attributes);
 		}
 		return $this->output();
 	}
 
+	/**
+	 * Get Attributes entry in config and check it's value
+	 *
+	 * @return array
+	 */
+	protected function getConfigAttributes()
+	{
+		$attributes = $this->getConfig('attributes');
 
-	private function strip() {
+		if (!is_array($attributes))
+		{
+			throw new \Exception('Attributes entry in config must be an array.');
+		}
+
+		if ($this->is_assoc($attributes))
+		{
+			throw new \Exception('Attributes entry in config cannot be an associative array.');
+		}
+
+		// You often find Ldap attributes in a CamelCase form. This is irrelevant
+		// when querying Ldap with PHP.
+		return array_map('strtolower', $attributes);
+	}
+
+	/**
+	 * Get config setting
+	 *
+	 * @param string  $setting
+	 * @return mixed
+	 */
+	protected function getConfig($setting)
+	{
+		if(!array_key_exists($setting, $this->config))
+		{
+			throw new \Exception('Setting doesn\'t exist in config.');
+		}
+		return $this->config[$setting];
+	}
+
+	/**
+	 * Get the entries from Cache
+	 *
+	 * @return array
+	 **/
+	private function getEntriesFromCache()
+	{
+		// Write to results, pop entry from requestedEntries
 		$striped = array();
 		// get rid of the users we already know
-		foreach($this->usernames as $k => $v) {
+		foreach($this->requestedEntries as $k => $v) {
 			if (!$this->instore($v)) {
 				$striped[$k] = $v;
 			}
 		}
-		if(!empty($striped))
-			$this->request($striped);
+		return $striped;
 	}
 
-	private function request($usernames) {
+	/**
+	 * Get the entries from Directory
+	 *
+	 * @param array  $usernames
+	 * @return void
+	 **/
+	protected function getEntriesFromDirectory($usernames)
+	{
 		// Check if people DN exists in config
 		if (is_null($peopledn = $this->config['peopledn']))
 		{
@@ -252,15 +330,15 @@ class Directory {
 	 * @var array $data
 	 */
 	private function output() {
-		if(count($this->usernames) == 1 && count($this->attributes) == 1) {
+		if(count($this->requestedEntries) == 1 && count($this->attributes) == 1) {
 			$attr = $this->attributes[0];
-			$un = $this->usernames[0];
+			$un = $this->requestedEntries[0];
 			$user =  $this->getstore($un);
 			return $user[$attr][0];
 		}
 		else {
 			$output = array();
-			foreach($this->usernames as $n => $u) {
+			foreach($this->requestedEntries as $n => $u) {
 				if($this->instore($u)) {
 					$user = $this->getstore($u);
 					foreach($this->attributes as $a){
@@ -283,6 +361,16 @@ class Directory {
 		{
 			ldap_close($this->connection);
 		}
+	}
+
+	/**
+	 * Checks if an array is associative
+	 *
+	 * @param array $array
+	 * @return boolean
+	 */
+	protected function is_assoc(array $array) {
+		return (bool)count(array_filter(array_keys($array), 'is_string'));
 	}
 
 }
