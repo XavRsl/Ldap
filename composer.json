@@ -14,6 +14,15 @@
         "ext-ldap": "*",
         "illuminate/support": "4.x"
     },
+		"require-dev": {
+	      "orchestra/testbench": "2.1.*"
+	  },
+		"repositories": [
+        {
+            "type": "vcs",
+            "url": "git://github.com/orchestral/phpseclib.git"
+        }
+    ],
     "autoload": {
         "psr-0": {
             "Xavrsl\\Ldap": "src/"

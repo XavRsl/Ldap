@@ -10,27 +10,6 @@ class Directory {
 	protected $config;
 
 	/**
-	 * The bind password for ldap
-	 *
-	 * @var int
-	 */
-	protected $bindpwd;
-
-	/**
-	 * The connection to the Ldap.
-	 *
-	 * @var resource
-	 */
-	protected $connection;
-
-	/**
-	 * Binded to the Ldap.
-	 *
-	 * @var resource
-	 */
-	protected $binded;
-
-	/**
 	 * Search results.
 	 *
 	 * @var array
@@ -54,52 +33,12 @@ class Directory {
 	/**
 	 * Create a new Ldap connection instance.
 	 *
-	 * @param  string  $server
-	 * @param  string  $port
-	 * @return void
+	 * @param  array  $config
 	 */
-	public function __construct($config, $bindpwd)
+	public function __construct($config, $connection)
 	{
 		$this->config = $config;
-		$this->bindpwd = $bindpwd;
-	}
-
-	/**
-	 * Establish the connection to the LDAP.
-	 *
-	 * @return resource
-	 */
-	public function connect()
-	{
-		if ( ! is_null($this->connection)) return $this->connection;
-
-		$server = $this->getConfig('server');
-		$this->connection = ldap_connect($server, $this->getConfig('port'));
-
-		if ($this->connection === false)
-		{
-			throw new \Exception("Connection to Ldap server {$server} impossible.");
-		}
-
-		ldap_set_option($this->connection, LDAP_OPT_PROTOCOL_VERSION, 3);
-		ldap_set_option($this->connection, LDAP_OPT_REFERRALS, 0);
-	}
-
-	/**
-	 * Bind to the LDAP.
-	 *
-	 * @return resource
-	 */
-	public function bind()
-	{
-		if ( ! is_null($this->binded)) return $this->binded;
-
-		$this->binded = ldap_bind($this->connection, $this->getConfig('binddn'), $this->bindpwd);
-
-		if ($this->binded === false)
-		{
-			throw new \Exception("Can't bind to the Ldap server with these credentials.");
-		}
+		$this->connection = $connection;
 	}
 
 	public function query($method, $parameters)
@@ -182,15 +121,13 @@ class Directory {
 		if (empty($userid) || empty($password)) {
 			return false;
 		}
-		//get user details (and cache it) using peoplequery. This uses admin credentials
-		$this->peopleQuery($userid);
-		//try to bind user dn with user credentials
-		try {
-			$user = $this->getstore($userid);
-			return ldap_bind($this->connection, $user[$this->config['userdn']], $password);
-		} catch (\Exception $e) {
-			return false;
+
+		$user = static::query('people', [$userid])->get($this->getConfig('userdn'));
+
+		if(ldap_bind($this->connection->getResource(), $user, $password)) {
+			return true;
 		}
+		return false;
 	}
 
 	public function __get($attribute)
@@ -206,10 +143,14 @@ class Directory {
 	 */
 	public function get($attributes = null)
 	{
-		$cachedEntries = $this->getEntriesFromCache();
+		$this->results = array();
+		$cachedEntries = $this->setEntriesFromCache();
 
-		if(!empty($cachedEntries))
-			$directoryEntries = $this->getEntriesFromDirectory($cachedEntries);
+		// Make a directory query only if the info is not already in cache.
+		if(!empty($this->requestedEntries))
+		{
+			$directoryEntries = $this->setEntriesFromDirectory();
+		}
 
 		// if no attributes are supplied, use all from config 'attributes' setting
 		if ($attributes === null) {
@@ -235,7 +176,7 @@ class Directory {
 			throw new \Exception('Attributes entry in config must be an array.');
 		}
 
-		if ($this->is_assoc($attributes))
+		if ($this->isAssoc($attributes))
 		{
 			throw new \Exception('Attributes entry in config cannot be an associative array.');
 		}
@@ -261,67 +202,70 @@ class Directory {
 	}
 
 	/**
-	 * Get the entries from Cache
+	 * Set the entries from Cache
 	 *
 	 * @return array
 	 **/
-	private function getEntriesFromCache()
+	private function setEntriesFromCache()
 	{
-		// Write to results, pop entry from requestedEntries
-		$striped = array();
-		// get rid of the users we already know
-		foreach($this->requestedEntries as $k => $v) {
-			if (!$this->instore($v)) {
-				$striped[$k] = $v;
+		// Delete entries we already know from requestedEntries
+		foreach($this->requestedEntries as $entry) {
+			if ($this->inStore($entry)) {
+				// Fill in the instance's results
+				$this->results[$entry] = $this->getStore($entry);
+
+				// We have the entry in cache already. No need to look for it.
+				$a = array_merge(array_diff($this->requestedEntries, array($entry)));
+
+				$this->requestedEntries = $a;
 			}
 		}
-		return $striped;
 	}
 
 	/**
-	 * Get the entries from Directory
+	 * Set the entries from Directory
 	 *
-	 * @param array  $usernames
 	 * @return void
 	 **/
-	protected function getEntriesFromDirectory($usernames)
+	protected function setEntriesFromDirectory()
 	{
 		// Check if people DN exists in config
-		if (is_null($peopledn = $this->config['peopledn']))
+		if (is_null($peopledn = $this->getConfig('peopledn')))
 		{
 			throw new \Exception('No People DN in config');
 		}
-		$baseFilter = $this->config['basefilter'];
+		$baseFilter = $this->getConfig('basefilter');
 
-		// $usernames is an array
 		$filter = '(|';
-		foreach($usernames as $username) {
-			$filter .= str_replace('%uid', "{$username}", $baseFilter);
+		foreach($this->requestedEntries as $requestedEntry) {
+			$filter .= str_replace('%uid', "{$requestedEntry}", $baseFilter);
 		}
 		$filter .= ')';
 
-		$attributes = $this->config['attributes'];
-		$key = $this->config['key'];
+		$attributes = $this->getConfig('attributes');
+		$key = $this->getConfig('key');
 
-		$sr = ldap_search($this->connection, $peopledn, $filter, $attributes);
+		$sr = ldap_search($this->connection->getResource(), $peopledn, $filter, $attributes);
 		// return an array of CNs
-		$results = ldap_get_entries($this->connection, $sr);
-		for($i = 0; $i < $results['count']; $i++) {
-			$this->store($results[$i][$key][0], $results[$i]);
+		$entries = ldap_get_entries($this->connection->getResource(), $sr);
+		for($i = 0; $i < $entries['count']; $i++) {
+			// Store in cache
+			$this->store($entries[$i][$key][0], $entries[$i]);
+			// Store in instance
+			$this->results[$entries[$i][$key][0]] = $entries[$i];
 		}
 	}
 
 	private function store($key, $value = '') {
-		\Cache::put($key, $value, $this->config['cachettl']);
-		$this->results[$key] = $value;
+		\Cache::put($key, $value, $this->getConfig('cachettl'));
 	}
 
-	private function getstore($key) {
-		return (isset($this->results[$key])) ? $this->results[$key] : \Cache::get($key);
+	private function getStore($key) {
+		return \Cache::get($key);
 	}
 
-	private function instore($key) {
-		return (isset($this->results[$key])) ? true : \Cache::has($key);
+	private function inStore($key) {
+		return \Cache::has($key);
 	}
 
 	/**
@@ -330,24 +274,42 @@ class Directory {
 	 * @var array $data
 	 */
 	private function output() {
-		if(count($this->requestedEntries) == 1 && count($this->attributes) == 1) {
+		if(count($this->results) == 1 && count($this->attributes) == 1) {
 			$attr = $this->attributes[0];
-			$un = $this->requestedEntries[0];
-			$user =  $this->getstore($un);
-			return $user[$attr][0];
+			$result = array_shift($this->results);
+			return $this->format($result[$attr]);
 		}
 		else {
 			$output = array();
-			foreach($this->requestedEntries as $n => $u) {
-				if($this->instore($u)) {
-					$user = $this->getstore($u);
-					foreach($this->attributes as $a){
-						$output[$u][$a] = array_key_exists($a, $user) ? $user[$a][0] : null;
-					}
+			foreach($this->results as $n => $u) {
+				foreach($this->attributes as $a){
+					$output[$n][$a] = array_key_exists($a, $u) ? $this->format($u[$a]) : null;
 				}
 			}
 			return $output;
 		}
+	}
+
+	/**
+	 * Format attributes
+	 *
+	 * Ldap attributes may be multi-valued.
+	 *
+	 * @var array|string  $attributes
+	 * @return mixed
+	 **/
+	protected function format($attributes)
+	{
+		if(is_array($attributes))
+		{
+			// Typical Ldap attribute returned array is :
+			// ['count' => 1, 0 => 'value']
+			if(isset($attributes['count']) AND $attributes['count'] === 1)
+			{
+				return $attributes[0];
+			}
+		}
+		return $attributes;
 	}
 
 	/**
@@ -357,9 +319,9 @@ class Directory {
 	 */
 	public function __destruct()
 	{
-		if ($this->connection)
+		if ($this->connection->getResource())
 		{
-			ldap_close($this->connection);
+			ldap_close($this->connection->getResource());
 		}
 	}
 
@@ -369,7 +331,7 @@ class Directory {
 	 * @param array $array
 	 * @return boolean
 	 */
-	protected function is_assoc(array $array) {
+	protected function isAssoc(array $array) {
 		return (bool)count(array_filter(array_keys($array), 'is_string'));
 	}
 
