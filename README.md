@@ -34,7 +34,7 @@ Add the facade to the alias array (also in config/app):
 You then need to customize the config file to indicate the location of your ldap server and also set your dn, attributes etc. 
 
 ```
-php artisan config:publish Xavrsl/ldap
+php artisan config:publish xavrsl/ldap
 ```
 
 Now, you are ready to use all that this package offers.
