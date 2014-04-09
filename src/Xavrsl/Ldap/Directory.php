@@ -1,5 +1,7 @@
 <?php namespace Xavrsl\Ldap;
 
+use Illuminate\Support\Facades\Cache;
+
 class Directory {
 
 	/**
@@ -8,6 +10,34 @@ class Directory {
 	 * @var string
 	 */
 	protected $config;
+
+	/**
+	 * Requested Organisation Unit
+	 *
+	 * @var string
+	 */
+	protected $organisationUnit;
+
+	/**
+	 * Default Organisation Unit
+	 *
+	 * @var string
+	 */
+	protected $defaultOrganisationUnit = 'people';
+
+	/**
+	 * Attribute to use in filter
+	 *
+	 * @var string
+	 */
+	protected $filterAttribute = 'login';
+
+	/**
+	 * Boolean Operator
+	 *
+	 * @var string
+	 */
+	protected $booleanOperator = '&';
 
 	/**
 	 * Search results.
@@ -41,18 +71,40 @@ class Directory {
 		$this->connection = $connection;
 	}
 
+	/**
+	 * Close the connection to the LDAP.
+	 *
+	 * @return void
+	 */
+	public function __destruct()
+	{
+		if ($this->connection->getResource())
+		{
+			ldap_close($this->connection->getResource());
+		}
+	}
+
+	/************************************************/
+	/*************** Public methods *****************/
+	/************************************************/
+
 	public function query($method, $parameters)
 	{
-		if ($method == 'people') {
+		if ($this->setOrganisationUnit($method)) {
 			if (count($parameters) !== 1) {
-				throw new \Exception('People method expecting only one parameter (can be an array)');
+				throw new \Exception('OU method expecting only one parameter (can be an array)');
 			}
 			$this->setRequestedEntries($parameters[0]);
 			return $this;
 		}
+		elseif($method == 'find')
+		{
+			$this->find($parameters[0]);
+			return $this;
+		}
 		elseif ($method == 'auth') {
 			if (count($parameters) !== 2) {
-				throw new \Exception('Auth takes Userid and Password as parameters');
+				throw new \Exception('Auth takes Login and Password as parameters');
 			}
 			return $this->auth($parameters[0], $parameters[1]);
 		}
@@ -60,6 +112,109 @@ class Directory {
 			throw new \Exception("This function is not implemented (Yet ?).");
 		}
 	}
+
+	/**
+	 * Authenticate a user
+	 *
+	 * @param string  $login
+	 * @param string  $password
+	 * @return boolean
+	 */
+	public function auth($login, $password)
+	{
+		// Prevent null binding
+		if ($login === null || $password === null) {
+			return false;
+		}
+		if (empty($login) || empty($password)) {
+			return false;
+		}
+
+		$user = static::query('people', [$login])->get($this->getConfig('userdn'));
+
+		if(ldap_bind($this->connection->getResource(), $user, $password)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Get Directory single attributes and make the search
+	 *
+	 * @param string  $usernames
+	 * @return mixed
+	 */
+	public function __get($attribute)
+	{
+		return $this->get($attribute);
+	}
+
+	/**
+	 * Get Directory attributes and make the search
+	 *
+	 * @param string|array  $usernames
+	 * @return mixed
+	 */
+	public function get($attributes = null)
+	{
+		$this->results = array();
+		$this->setEntriesFromCache();
+
+		// Make a directory query only if the info is not already in cache.
+		if(!empty($this->requestedEntries))
+		{
+			$directoryEntries = $this->setEntriesFromDirectory();
+		}
+
+		// if no attributes are supplied, use all from config 'attributes' setting
+		if ($attributes === null) {
+			$this->attributes = $this->getConfigAttributes();
+		}
+		else {
+			$this->attributes = array_map('strtolower', $this->getParameters($attributes));
+		}
+		return $this->output();
+	}
+
+	/**
+	 * Search through the directory's selected organisation unit
+	 * exemple OUs : people, group, mail, ...
+	 *
+	 * @var string  $organisationUnit
+	 **/
+	public function find($organisationUnit)
+	{
+		$this->setOrganisationUnit($organisationUnit);
+	}
+
+	/**
+	 * Create Directory filter
+	 *
+	 * @var string  $attribute
+	 * @var string  $search
+	 **/
+	public function where($attribute, $search)
+	{
+		$this->filterAttribute = $attribute;
+		$this->setRequestedEntries($search);
+		return $this;
+	}
+
+	/**
+	 * Create Directory filter
+	 *
+	 * @var string  $attribute
+	 * @var string  $search
+	 **/
+	public function orWhere($attribute, $search)
+	{
+		$this->booleanOperator = '|';
+		$this->where($attribute, $search);
+	}
+
+	/************************************************/
+	/************** Protected methods ***************/
+	/************************************************/
 
 	/**
 	 * Set the requested entries list
@@ -70,13 +225,30 @@ class Directory {
 	{
 		$searchArray = $this->getParameters($searchArray);
 
-		if ($this->checkWildcards($searchArray))
+		if ($this->checkWildcards($searchArray) AND count($searchArray) > 1)
 		{
-			throw new \Exception('Wildcards (*) are not usable right now...');
+			throw new \Exception('Wildcards (*) can be used with only one parameter.');
 		}
 
 		// Fill an array containing the list of the entries we are looking for
 		$this->requestedEntries = $searchArray;
+	}
+
+	/**
+	 * Set Organisation Unit to look for
+	 *
+	 * @var string  $organisationUnit
+	 * @return string
+	 **/
+	protected function setOrganisationUnit($organisationUnit)
+	{
+		$searchOU = strtolower($organisationUnit);
+		$confOU = array_map('strtolower', $this->getConfig('organisationUnits'));
+		if (!in_array($searchOU, $confOU))
+		{
+			return false;
+		}
+		return $this->organisationUnit = $searchOU;
 	}
 
 	/**
@@ -112,56 +284,6 @@ class Directory {
 		return false;
 	}
 
-	public function auth($userid, $password)
-	{
-		// Prevent null binding
-		if ($userid === null || $password === null) {
-			return false;
-		}
-		if (empty($userid) || empty($password)) {
-			return false;
-		}
-
-		$user = static::query('people', [$userid])->get($this->getConfig('userdn'));
-
-		if(ldap_bind($this->connection->getResource(), $user, $password)) {
-			return true;
-		}
-		return false;
-	}
-
-	public function __get($attribute)
-	{
-		return $this->get($attribute);
-	}
-
-	/**
-	 * Get Ldap attributes and make the search
-	 *
-	 * @param string|array  $usernames
-	 * @return mixed
-	 */
-	public function get($attributes = null)
-	{
-		$this->results = array();
-		$cachedEntries = $this->setEntriesFromCache();
-
-		// Make a directory query only if the info is not already in cache.
-		if(!empty($this->requestedEntries))
-		{
-			$directoryEntries = $this->setEntriesFromDirectory();
-		}
-
-		// if no attributes are supplied, use all from config 'attributes' setting
-		if ($attributes === null) {
-			$this->attributes = $this->getConfigAttributes();
-		}
-		else {
-			$this->attributes = $this->getParameters($attributes);
-		}
-		return $this->output();
-	}
-
 	/**
 	 * Get Attributes entry in config and check it's value
 	 *
@@ -179,6 +301,13 @@ class Directory {
 		if ($this->isAssoc($attributes))
 		{
 			throw new \Exception('Attributes entry in config cannot be an associative array.');
+		}
+
+		// The key config parameter needs to be retrieved from the Directory
+		// even if it's not in the attributes array
+		if(!in_array($this->getConfig('key'), $attributes))
+		{
+			$attributes[] = $this->getConfig('key');
 		}
 
 		// You often find Ldap attributes in a CamelCase form. This is irrelevant
@@ -202,20 +331,35 @@ class Directory {
 	}
 
 	/**
+	 * Get Selected Organisation Unit
+	 *
+	 * @return string
+	 */
+	protected function getOrganisationUnit()
+	{
+		return isset($this->organisationUnit) ? $this->organisationUnit :
+			$this->defaultOrganisationUnit;
+	}
+
+	/**
 	 * Set the entries from Cache
 	 *
-	 * @return array
 	 **/
-	private function setEntriesFromCache()
+	protected function setEntriesFromCache()
 	{
 		// Delete entries we already know from requestedEntries
 		foreach($this->requestedEntries as $entry) {
+			Cache::forget($entry);
 			if ($this->inStore($entry)) {
 				// Fill in the instance's results
 				$this->results[$entry] = $this->getStore($entry);
 
 				// We have the entry in cache already. No need to look for it.
-				$a = array_merge(array_diff($this->requestedEntries, array($entry)));
+				$a = array_merge(
+					array_diff(
+						$this->requestedEntries, array($entry)
+					)
+				);
 
 				$this->requestedEntries = $a;
 			}
@@ -229,54 +373,79 @@ class Directory {
 	 **/
 	protected function setEntriesFromDirectory()
 	{
-		// Check if people DN exists in config
-		if (is_null($peopledn = $this->getConfig('peopledn')))
+		// Check if base DN exists in config
+		if (is_null($this->getConfig('basedn')))
 		{
-			throw new \Exception('No People DN in config');
+			throw new \Exception('No Base DN in config');
 		}
-		$baseFilter = $this->getConfig('basefilter');
+		$dn = 'ou=' . $this->getOrganisationUnit() .','. $this->getConfig('basedn');
+		// $baseFilter = $this->getConfig('basefilter');
 
-		$filter = '(|';
+		$filter = '(' . $this->booleanOperator;
 		foreach($this->requestedEntries as $requestedEntry) {
-			$filter .= str_replace('%uid', "{$requestedEntry}", $baseFilter);
+			$filter .= '(' . $this->filterAttribute . '=' . $requestedEntry . ')';
 		}
 		$filter .= ')';
 
-		$attributes = $this->getConfig('attributes');
+		$attributes = $this->getConfigAttributes();
 		$key = $this->getConfig('key');
 
-		$sr = ldap_search($this->connection->getResource(), $peopledn, $filter, $attributes);
+		$sr = ldap_search($this->connection->getResource(), $dn, $filter, $attributes);
 		// return an array of CNs
 		$entries = ldap_get_entries($this->connection->getResource(), $sr);
+		\Debugbar::info($entries);
 		for($i = 0; $i < $entries['count']; $i++) {
 			// Store in cache
-			$this->store($entries[$i][$key][0], $entries[$i]);
+			$this->store($this->format($entries[$i][$key]), $entries[$i]);
 			// Store in instance
-			$this->results[$entries[$i][$key][0]] = $entries[$i];
+			// \Debugbar::warning($entries[$i][$key]);
+			$this->results[$this->format($entries[$i][$key])] = $entries[$i];
 		}
 	}
 
-	private function store($key, $value = '') {
-		\Cache::put($key, $value, $this->getConfig('cachettl'));
+	/**
+	 * Store the key in cache
+	 *
+	 * @var mixed  $key
+	 * @var array  $value
+	 */
+	protected function store($key, $value) {
+		// Following the key variable with an 'l' is the only way I could make cache
+		// work with numeric keys. It's ugly but force typing to string didn't work...
+		// It has no consequence on the 'results' array.
+		Cache::put($key.'l', $value, $this->getConfig('cachettl'));
 	}
 
-	private function getStore($key) {
-		return \Cache::get($key);
+	/**
+	 * Get the key from cache
+	 *
+	 * @var mixed  $key
+	 * @return array
+	 */
+	protected function getStore($key) {
+		return Cache::get($key.'l');
 	}
 
-	private function inStore($key) {
-		return \Cache::has($key);
+	/**
+	 * Check if key lives in cache
+	 *
+	 * @var mixed  $key
+	 * @return array
+	 */
+	protected function inStore($key) {
+		return Cache::has($key.'l');
 	}
 
 	/**
 	 * Output the finilized result
 	 *
-	 * @var array $data
+	 * @return array
 	 */
-	private function output() {
+	protected function output() {
 		if(count($this->results) == 1 && count($this->attributes) == 1) {
 			$attr = $this->attributes[0];
 			$result = array_shift($this->results);
+
 			return $this->format($result[$attr]);
 		}
 		else {
@@ -310,19 +479,6 @@ class Directory {
 			}
 		}
 		return $attributes;
-	}
-
-	/**
-	 * Close the connection to the LDAP.
-	 *
-	 * @return void
-	 */
-	public function __destruct()
-	{
-		if ($this->connection->getResource())
-		{
-			ldap_close($this->connection->getResource());
-		}
 	}
 
 	/**

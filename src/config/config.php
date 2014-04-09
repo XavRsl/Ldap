@@ -30,7 +30,16 @@ return array(
 		|--------------------------------------------------------------------------
 		*/
 
-		'peopledn' => 'ou=People,dc=domain,dc=fr',
+		'basedn' => 'dc=domain,dc=fr',
+
+		/*
+		|--------------------------------------------------------------------------
+		| Managed Organisation Units (OU)
+		| Only people works for now
+		|--------------------------------------------------------------------------
+		*/
+
+		'organisationUnits' => ['people', 'groups'],
 
 		/*
 		|--------------------------------------------------------------------------
@@ -50,7 +59,8 @@ return array(
 
 		/*
 		|--------------------------------------------------------------------------
-		| cache time-to-live value in minutes. How long should we cache result if found
+		| Cache time-to-live value in minutes.
+		| How long should we cache result if found
 		|--------------------------------------------------------------------------
 		*/
 
@@ -58,24 +68,34 @@ return array(
 
 		/*
 		|--------------------------------------------------------------------------
-		| caching key. This is typically a unique userid allotted to resources in ldap
+		| Caching & Results array key.
+		| This is typically a unique attribute from the directory OU
 		|--------------------------------------------------------------------------
 		*/
 
-		'key'        => 'uid',
+		'key'        => 'dn',
 
 		/*
 		|--------------------------------------------------------------------------
-		| userdn used for user authentication. This is the distinguished name
-		| of a user that will authenticate to the directory using a BIND. Typically named 'dn'
+		| User dn used for user authentication.
+		| This is the distinguished name of a user that will authenticate to
+		| the directory using a BIND. Typically named 'dn'
 		|--------------------------------------------------------------------------
 		*/
 
 		'userdn'     => 'dn',
 
-		'basefilter' => '(login=%uid)',
 		'searchscope' => 'SUBTREE_SCOPE',
-		'attributes' => array("displayname", "sn", "givenname", "mail", 'edupersonaffiliation', 'supannaffectation', 'login'),
-	
+
+		'attributes' => array(
+			'uid',
+			'displayName',
+			'sn',
+			'givenName',
+			'mail',
+			'edupersonAffiliation',
+			'supannAffectation',
+			'login',
+		),
 	),
 );
