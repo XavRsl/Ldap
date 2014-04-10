@@ -41,7 +41,7 @@ First remember to set ALL your config parameters. All sections have been well do
 Any attribute that you want to retrieve MUST be specified in the 'attributes' array.
 
 - Return an attribute from one member of your organisation :
-```
+```php
 // First possibility, with find/where methods and get
 Ldap::find('people')->where('uid', 8162)->get('displayname');
 
@@ -60,7 +60,7 @@ Bobby Blake
 ```
 
 - Return multiple attributes for a single member of organisation :
-```
+```php
 // Let's directly use the short method
 Ldap::people(8162)->get('displayname, mail');
 
@@ -68,7 +68,7 @@ Ldap::people(8162)->get('displayname, mail');
 Ldap::people(8162)->get(['displayName', 'mail']);
 ```
 This should return :
-```
+```php
 array(1) [
     '8162' => array(2) [
         'displayname' => string (11) "Bobby Blake"
@@ -77,7 +77,7 @@ array(1) [
 ]
 ```
 If you change the key in your config to some attribute like 'login' for exemple, you get :
-```
+```php
 array(1) [
     'bobblake' => array(2) [
         'displayname' => string (11) "Bobby Blake"
@@ -88,7 +88,7 @@ array(1) [
 **NOTE :** You don't need to add the 'key' attribute's value in the 'attributes' array in the config. The package does that for you.
 
 - Return multiple attributes from multiple members of the organisation :
-```
+```php
 // Let's use the short method again
 Ldap::people('8162, 128')->get('displayname, mail');
 
@@ -102,7 +102,7 @@ Ldap::find('people')->where('uid', ['8162', '128'])->get(['displayName', 'mail']
 Ldap::find('people')->where('login', ['bobblake', 'johndoe'])->get(['displayName', 'mail']);
 ```
 This should return :
-```
+```php
 array(2) [
     '108' => array(2) [
         'displayname' => string (8) "John Doe"
@@ -116,7 +116,7 @@ array(2) [
 ```
 
 You can also return all the attributes you've set in the 'attributes' config property :
-```
+```php
 // The long way
 Ldap::find('people')->where('login', ['bobblake', 'johndoe'])->get();
 
@@ -125,7 +125,7 @@ Ldap::people('bobblake, johndoe')->get();
 ```
 
 - Query the Ldap Directory based on a wildcard :
-```
+```php
 // The long way
 Ldap::find('people')->where('login', 'bob*')->get(['displayName', 'mail']);
 
@@ -136,7 +136,7 @@ Ldap::people('bob*')->get(['displayName', 'mail']);
 Ldap::people('bob*, john*')->get(['displayName', 'mail']);
 ```
 You get a result looking something like this :
-```
+```php
 array(2) [
     '108' => array(2) [
         'displayname' => string (8) "John Doe"
@@ -159,7 +159,7 @@ array(2) [
 You get the idea !!
 
 - Authenticate against the Ldap Directory :
-```
+```php
 // Depending on the filter attribute you've set in the config
 Ldap::auth('bobblake', 'm7V3ryStr0ngP@ssw0rd!')
 ```
