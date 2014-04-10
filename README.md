@@ -121,7 +121,7 @@ You can also return all the attributes you've set in the 'attributes' config pro
 Ldap::find('people')->where('login', ['bobblake', 'johndoe'])->get();
 
 // The short way
-Ldap::people('bobblake, johndoe')->get();
+Ldap::people('108, 8162')->get();
 ```
 
 - Query the Ldap Directory based on a wildcard :
@@ -129,7 +129,7 @@ Ldap::people('bobblake, johndoe')->get();
 // The long way
 Ldap::find('people')->where('login', 'bob*')->get(['displayName', 'mail']);
 
-// The short way
+// The short way (assuming you have set the 'filter' attribute to 'login' in config)
 Ldap::people('bob*')->get(['displayName', 'mail']);
 
 // Also works with multiple wildcards
