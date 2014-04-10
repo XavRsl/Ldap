@@ -261,6 +261,9 @@ class Directory {
 	 **/
 	protected function getParameters($parameters)
 	{
+		// In case user would look for numeric value
+		$parameters = is_numeric($parameters) ? (string) $parameters : $parameters;
+
 		// People identifiers can be given as string ('xavrsl'), as string containing
 		// multiple identifiers ('xavrsl, jeanmich') or as an array (['xavrsl', 'jeanmich'])
 		// Let's turn everything into a array
