@@ -9,7 +9,7 @@ Declare a dependency on this package in your composer.json file:
 
 ```
 "require": {
-	"xavrsl/ldap": "1.4"
+	"xavrsl/ldap": "v1.4"
 },
 ```
 

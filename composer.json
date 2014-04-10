@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=5.3.0",
+        "php": ">=5.4.0",
         "ext-ldap": "*",
         "illuminate/support": "4.x"
     },
@@ -28,5 +28,5 @@
             "Xavrsl\\Ldap": "src/"
         }
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "stable"
 }
