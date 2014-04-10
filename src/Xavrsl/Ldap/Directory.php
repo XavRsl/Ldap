@@ -95,7 +95,7 @@ class Directory {
 			if (count($parameters) !== 1) {
 				throw new \Exception('OU method expecting only one parameter (can be an array)');
 			}
-
+			$this->filterAttribute = $this->getConfig('filter');
 			$this->setRequestedEntries($parameters[0]);
 			return $this;
 		}
