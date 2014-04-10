@@ -9,8 +9,8 @@ Declare a dependency on this package in your composer.json file:
 
 ```
 "require": {
-		"xavrsl/ldap": "1.3"
-	},
+	"xavrsl/ldap": "1.3"
+},
 ```
 
 Next, run **composer update** to pull in the code.
