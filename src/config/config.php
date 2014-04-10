@@ -77,6 +77,16 @@ return array(
 
 		/*
 		|--------------------------------------------------------------------------
+		| Default filter attribute
+		| Will be used when calling short method like :
+		| Ldap::people('xavrsl')->displayname;
+		|--------------------------------------------------------------------------
+		*/
+
+		'filter'        => 'login',
+
+		/*
+		|--------------------------------------------------------------------------
 		| User dn used for user authentication.
 		| This is the distinguished name of a user that will authenticate to
 		| the directory using a BIND. Typically named 'dn'

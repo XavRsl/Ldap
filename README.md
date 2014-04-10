@@ -1,23 +1,19 @@
-LDAP plugin for Laravel 4.x
+LDAP package for Laravel 4.x
 ===========================
 
-I know that a bundle already exists to manage LDAP auth in Laravel, but, it only works for Laravel 3.X, and it's made for authentication.  
-The LDAP Zend Class in Laravel is another option... but it was a bit too much for what I needed.  
-Considering this plugin from a CRUD point of view, this is only a R - it allows you to lookup the ldap details of a resource.  
-
-Considering this plugin from a Geek point of view, this is my first time writing a plugin for Laravel 4.X as a Composer Package.  
+This composer package is an attempt to provide a way to search through an Ldap Directory like you would query a database with Eloquent.
 
 Installing
 ----------
 Declare a dependency on this package in your composer.json file:
 
 ```
-"require": {		
-		"xavrsl/ldap": "1.2"
+"require": {
+		"xavrsl/ldap": "1.3"
 	},
-```	
+```
 
-Next, run composer update to pull in the code.
+Next, run **composer update** to pull in the code.
 
 Add the service provider to config/app :
 
@@ -31,56 +27,151 @@ Add the facade to the alias array (also in config/app):
 'Ldap' => 'Xavrsl\Ldap\Facades\Ldap',
 ```
 
-You then need to customize the config file to indicate the location of your ldap server and also set your dn, attributes etc. 
+You then need to publish and customize the config file to indicate the location of your ldap server and also set your dn, attributes etc.
 
 ```
 php artisan config:publish xavrsl/ldap
 ```
 
-Now, you are ready to use all that this package offers.
+You're now ready to use this package !
 
 Usage
 -----
-First remember to set ALL your config parameters. All sections have been well commented. Any attribute that you want to retrieve MUST be specified in the 'attributes' array.
+First remember to set ALL your config parameters. All sections have been well documented in the comments.
+Any attribute that you want to retrieve MUST be specified in the 'attributes' array.
 
-1. To get the CN's of user1 and user2:
+- Return an attribute from one member of your organisation :
 ```
- $names = Ldap::people('user1', 'user2')->cn;
- dd($names);
-```
-displays (assuming ofcourse that both user1 and user2 exist in the directory. No data will be returned if they dont)
+// First possibility, with find/where methods and get
+Ldap::find('people')->where('uid', 8162)->get('displayname');
 
+// Second possibility, using an alias for the get method
+Ldap::find('people')->where('uid', 8162)->displayname;
+
+// Third possibility, attribute in camelCase format
+Ldap::find('people')->where('uid', 8162)->displayName;
+
+// If default attribute is set to 'uid' in conf, you can use the short method
+Ldap::people(8162)->displayname;
 ```
-array(2) {
-  ["user1"]=>
-  array(1) {
-    ["cn"]=>
-    string(8) "Common Name 1"
-  }
-  ["user2"]=>
-  array(1) {
-    ["cn"]=>
-    string(8) "Common Name 2"
-  }
-}
+All those possibilities should return the same string (our user's displayname) :
+```
+Bobby Blake
 ```
 
-2. Get a single attribute for a single user
-
+- Return multiple attributes for a single member of organisation :
 ```
- $name = Ldap::people('user1')->cn;
- dd($name);
+// Let's directly use the short method
+Ldap::people(8162)->get('displayname, mail');
+
+// May as well use an array instead of a string
+Ldap::people(8162)->get(['displayName', 'mail']);
+```
+This should return :
+```
+array(1) [
+    '8162' => array(2) [
+        'displayname' => string (11) "Bobby Blake"
+        'mail' => string (22) "bobby.blake@domain.org"
+    ]
+]
+```
+If you change the key in your config to some attribute like 'login' for exemple, you get :
+```
+array(1) [
+    'bobblake' => array(2) [
+        'displayname' => string (11) "Bobby Blake"
+        'mail' => string (22) "bobby.blake@domain.org"
+    ]
+]
+```
+**NOTE :** You don't need to add the 'key' attribute's value in the 'attributes' array in the config. The package does that for you.
+
+- Return multiple attributes from multiple members of the organisation :
+```
+// Let's use the short method again
+Ldap::people('8162, 128')->get('displayname, mail');
+
+// Same thing using arrays
+Ldap::people(['8162', '128'])->get(['displayName', 'mail']);
+
+// Longer syntax
+Ldap::find('people')->where('uid', ['8162', '128'])->get(['displayName', 'mail']);
+
+// Base your search on another attribute
+Ldap::find('people')->where('login', ['bobblake', 'johndoe'])->get(['displayName', 'mail']);
+```
+This should return :
+```
+array(2) [
+    '108' => array(2) [
+        'displayname' => string (8) "John Doe"
+        'mail' => string (20) "john.doe@domain.org"
+    ]
+    '8162' => array(2) [
+        'displayname' => string (11) "Bobby Blake"
+        'mail' => string (22) "bobby.blake@domain.org"
+    ]
+]
 ```
 
-3. Get all attributes (as declared in config file) for users1, 2 and 3
-
+You can also return all the attributes you've set in the 'attributes' config property :
 ```
-$data = Ldap::people('user1','user2', 'user3')->get();
+// The long way
+Ldap::find('people')->where('login', ['bobblake', 'johndoe'])->get();
+
+// The short way
+Ldap::people('bobblake, johndoe')->get();
 ```
 
-4. Authenticate user1 against the LDAP
-
+- Query the Ldap Directory based on a wildcard :
 ```
- $boolValue = Ldap::auth('user1','user1password');
- dd($boolValue);
-```    
+// The long way
+Ldap::find('people')->where('login', 'bob*')->get(['displayName', 'mail']);
+
+// The short way
+Ldap::people('bob*')->get(['displayName', 'mail']);
+
+// Also works with multiple wildcards
+Ldap::people('bob*, john*')->get(['displayName', 'mail']);
+```
+You get a result looking something like this :
+```
+array(2) [
+    '108' => array(2) [
+        'displayname' => string (8) "John Doe"
+        'mail' => string (20) "john.doe@domain.org"
+    ]
+    '4021' => array(2) [
+        'displayname' => string (10) "John Smith"
+        'mail' => string (22) "john.smith@domain.org"
+    ]
+    '8162' => array(2) [
+        'displayname' => string (11) "Bobby Blake"
+        'mail' => string (22) "bobby.blake@domain.org"
+    ]
+    '9520' => array(2) [
+        'displayname' => string (12) "Bob McCormac"
+        'mail' => string (24) "bobby.mccormac@domain.org"
+    ]
+]
+```
+You get the idea !!
+
+- Authenticate against the Ldap Directory :
+```
+// Depending on the filter attribute you've set in the config
+Ldap::auth('bobblake', 'm7V3ryStr0ngP@ssw0rd!')
+```
+Will simply return **TRUE** or **FALSE**.
+
+**NOTE :** Don't forget to set the dn attribute in config for user authentication.
+___
+TODOs :
+-------
+
+There is still a lot of work ahead to make this package complete. Here's a list of what you could expect in the future :
+
+- Create / update attributes from the Ldap. For now, the package can only read the Ldap.
+- Query multiple Organisation Units (Ldap branches, or OU. ex. : People, Groups, Mail, ...). This should work pretty soon...
+- Use Active Directory and Open Ldap. For now, only Open Ldap directories work.

@@ -30,14 +30,14 @@ class Directory {
 	 *
 	 * @var string
 	 */
-	protected $filterAttribute = 'login';
+	protected $filterAttribute;
 
 	/**
 	 * Boolean Operator
 	 *
 	 * @var string
 	 */
-	protected $booleanOperator = '&';
+	protected $booleanOperator = '|';
 
 	/**
 	 * Search results.
@@ -69,6 +69,7 @@ class Directory {
 	{
 		$this->config = $config;
 		$this->connection = $connection;
+		$this->filterAttribute = $this->getConfig('filter');
 	}
 
 	/**
@@ -94,6 +95,7 @@ class Directory {
 			if (count($parameters) !== 1) {
 				throw new \Exception('OU method expecting only one parameter (can be an array)');
 			}
+
 			$this->setRequestedEntries($parameters[0]);
 			return $this;
 		}
@@ -225,9 +227,9 @@ class Directory {
 	{
 		$searchArray = $this->getParameters($searchArray);
 
-		if ($this->checkWildcards($searchArray) AND count($searchArray) > 1)
+		if ($this->checkWildcards($searchArray))
 		{
-			throw new \Exception('Wildcards (*) can be used with only one parameter.');
+			$this->booleanOperator = '|';
 		}
 
 		// Fill an array containing the list of the entries we are looking for
@@ -379,7 +381,6 @@ class Directory {
 			throw new \Exception('No Base DN in config');
 		}
 		$dn = 'ou=' . $this->getOrganisationUnit() .','. $this->getConfig('basedn');
-		// $baseFilter = $this->getConfig('basefilter');
 
 		$filter = '(' . $this->booleanOperator;
 		foreach($this->requestedEntries as $requestedEntry) {
@@ -393,12 +394,11 @@ class Directory {
 		$sr = ldap_search($this->connection->getResource(), $dn, $filter, $attributes);
 		// return an array of CNs
 		$entries = ldap_get_entries($this->connection->getResource(), $sr);
-		\Debugbar::info($entries);
+
 		for($i = 0; $i < $entries['count']; $i++) {
 			// Store in cache
 			$this->store($this->format($entries[$i][$key]), $entries[$i]);
 			// Store in instance
-			// \Debugbar::warning($entries[$i][$key]);
 			$this->results[$this->format($entries[$i][$key])] = $entries[$i];
 		}
 	}
