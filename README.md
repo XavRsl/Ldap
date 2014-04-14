@@ -7,7 +7,7 @@ Installing
 ----------
 Declare a dependency on this package in your composer.json file:
 
-```
+```javascript
 "require": {
 	"xavrsl/ldap": "v1.4"
 },
@@ -17,13 +17,13 @@ Next, run **composer update** to pull in the code.
 
 Add the service provider to config/app :
 
-```
+```php
 'Xavrsl\Ldap\LdapServiceProvider',
 ```
 
 Add the facade to the alias array (also in config/app):
 
-```
+```php
 'Ldap' => 'Xavrsl\Ldap\Facades\Ldap',
 ```
 
