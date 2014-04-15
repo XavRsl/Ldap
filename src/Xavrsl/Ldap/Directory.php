@@ -354,7 +354,6 @@ class Directory {
 	{
 		// Delete entries we already know from requestedEntries
 		foreach($this->requestedEntries as $entry) {
-			Cache::forget($entry);
 			if ($this->inStore($entry)) {
 				// Fill in the instance's results
 				$this->results[$entry] = $this->getStore($entry);
