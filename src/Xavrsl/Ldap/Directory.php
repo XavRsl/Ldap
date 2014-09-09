@@ -448,6 +448,8 @@ class Directory {
 		if(count($this->results) == 1 && count($this->attributes) == 1) {
 			$attr = $this->attributes[0];
 			$result = array_shift($this->results);
+			
+			if (!array_key_exists($attr, $result)) return false;
 
 			return $this->format($result[$attr]);
 		}
