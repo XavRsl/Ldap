@@ -453,6 +453,14 @@ class Directory {
 
 			return $this->format($result[$attr]);
 		}
+		elseif(count($this->results) == 1 && count($this->attributes) > 1) {
+			$output = array();
+			$u = $this->results[0];
+			foreach($this->attributes as $a){
+				$output[$a] = array_key_exists($a, $u) ? $this->format($u[$a]) : null;
+			}
+			return $output;
+		}
 		else {
 			$output = array();
 			foreach($this->results as $n => $u) {
