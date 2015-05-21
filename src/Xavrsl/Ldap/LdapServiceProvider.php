@@ -18,7 +18,9 @@ class LdapServiceProvider extends ServiceProvider {
 	 */
 	public function boot()
 	{
-		$this->package('xavrsl/ldap');
+		$this->publishes([
+            __DIR__.'/../../config/ldap.php' => config_path('ldap.php'),
+        ]);
 	}
 
 	/**
@@ -28,10 +30,10 @@ class LdapServiceProvider extends ServiceProvider {
 	 */
 	public function register()
 	{
-		//
 		$this->app['ldap'] = $this->app->share(function()
 		{
-			return new LdapManager();
+            $config = $this->app['config']->get('ldap');
+			return new LdapManager($config);
 		});
 	}
 

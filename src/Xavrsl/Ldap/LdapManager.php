@@ -5,75 +5,51 @@ use Illuminate\Support\Manager;
 class LdapManager {
 
 	/**
-	 * The active connection instances.
+	 * The config Array
 	 *
 	 * @var array
 	 */
-	protected $connections = array();
+	protected $config;
+
+	/**
+	 * The active connection instances.
+	 *
+	 * @var Directory
+	 */
+	protected $connection;
+
+
+
+    function __construct(Array $config)
+    {
+        $this->config = $config;
+    }
 
 	/**
 	 * Get a Ldap connection instance.
 	 *
-	 * @param  string  $name
 	 * @return Xavrsl\Ldap\Directory
 	 */
-	public function connection($name = null)
+	public function connection()
 	{
-		if ( ! isset($this->connections[$name]))
+		if ( ! isset($this->connection))
 		{
-			$this->connections[$name] = $this->createConnection($name);
+			$this->connection = $this->createConnection();
 		}
 
-		return $this->connections[$name];
+		return $this->connection;
 	}
 
 	/**
-	 * Create the given connection by name.
+	 * Create the given connection.
 	 *
-	 * @param  string  $name
 	 * @return Xavrsl\Ldap\Directory
 	 */
-	protected function createConnection($name)
+	protected function createConnection()
 	{
-		$config = $this->getConfig($name);
-
-		$connection = new Directory($config, new Connection($config));
+		$connection = new Directory($this->config, new Connection($this->config));
 
 		return $connection;
-	}
-
-	/**
-	 * Get the configuration for a connection.
-	 *
-	 * @param  string  $name
-	 * @return array
-	 */
-	protected function getConfig($name)
-	{
-		$name = $name ?: $this->getDefaultConnection();
-
-		// To get the database connection configuration, we will just pull each of the
-		// connection configurations and get the configurations for the given name.
-		// If the configuration doesn't exist, we'll throw an exception and bail.
-		// $connections = $this->app['config']['database.ldap'];
-		$connections = \Config::get('ldap::'.$name);
-
-		if (is_null($connections))
-		{
-			throw new \InvalidArgumentException("Ldap [$name] not configured.");
-		}
-
-		return $connections;
-	}
-
-	/**
-	 * Get the default connection name.
-	 *
-	 * @return string
-	 */
-	protected function getDefaultConnection()
-	{
-		return 'default';
 	}
 
 	/**

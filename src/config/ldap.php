@@ -1,111 +1,109 @@
 <?php
 
 return array(
-	'default' => array(
 
-		/*
-		|--------------------------------------------------------------------------
-		| LDAP Server
-		|--------------------------------------------------------------------------
-		|
-		| Address of the LDAP Server
-		|
-		| Example: 'cas.myuniv.edu'.
-		|
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP Server
+    |--------------------------------------------------------------------------
+    |
+    | Address of the LDAP Server
+    |
+    | Example: 'cas.myuniv.edu'.
+    |
+    */
 
-		'server' => 'ldap.domain.fr',
+    'server' => env('LDAP_HOST'),
 
-		/*
-		|--------------------------------------------------------------------------
-		| LDAP Port (389 is default)
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP Port (389 is default)
+    |--------------------------------------------------------------------------
+    */
 
-		'port' => '389',
+    'port' => env('LDAP_PORT', '389'),
 
-		/*
-		|--------------------------------------------------------------------------
-		| LDAP Base DN
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP Base DN
+    |--------------------------------------------------------------------------
+    */
 
-		'basedn' => 'dc=domain,dc=fr',
+    'basedn' => env('LDAP_BASE_DN'),
 
-		/*
-		|--------------------------------------------------------------------------
-		| Managed Organisation Units (OU)
-		| Only people works for now
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | Managed Organisation Units (OU)
+    | Only people works for now
+    |--------------------------------------------------------------------------
+    */
 
-		'organisationUnits' => ['people', 'groups'],
+    'organisationUnits' => ['people', 'groups'],
 
-		/*
-		|--------------------------------------------------------------------------
-		| LDAP ADMIN bind DN
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP ADMIN bind DN
+    |--------------------------------------------------------------------------
+    */
 
-		'binddn' => 'cn=Manager,dc=domain,dc=fr',
+    'binddn' => env('LDAP_BIND_DN', 'cn=Manager,dc=domain,dc=fr'),
 
-		/*
-		|--------------------------------------------------------------------------
-		| LDAP ADMIN bind password
-		|--------------------------------------------------------------------------
-		|
-		*/
-		'bindpwd' => 'password',
+    /*
+    |--------------------------------------------------------------------------
+    | LDAP ADMIN bind password
+    |--------------------------------------------------------------------------
+    |
+    */
+    'bindpwd' => env('LDAP_BIND_PASSWORD'),
 
-		/*
-		|--------------------------------------------------------------------------
-		| Cache time-to-live value in minutes.
-		| How long should we cache result if found
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | Cache time-to-live value in minutes.
+    | How long should we cache result if found
+    |--------------------------------------------------------------------------
+    */
 
-		'cachettl'   => 20,
+    'cachettl'   => 20,
 
-		/*
-		|--------------------------------------------------------------------------
-		| Caching & Results array key.
-		| This is typically a unique attribute from the directory OU
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | Caching & Results array key.
+    | This is typically a unique attribute from the directory OU
+    |--------------------------------------------------------------------------
+    */
 
-		'key'        => 'dn',
+    'key'        => 'dn',
 
-		/*
-		|--------------------------------------------------------------------------
-		| Default filter attribute
-		| Will be used when calling short method like :
-		| Ldap::people('xavrsl')->displayname;
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | Default filter attribute
+    | Will be used when calling short method like :
+    | Ldap::people('xavrsl')->displayname;
+    |--------------------------------------------------------------------------
+    */
 
-		'filter'        => 'login',
+    'filter'        => 'login',
 
-		/*
-		|--------------------------------------------------------------------------
-		| User dn used for user authentication.
-		| This is the distinguished name of a user that will authenticate to
-		| the directory using a BIND. Typically named 'dn'
-		|--------------------------------------------------------------------------
-		*/
+    /*
+    |--------------------------------------------------------------------------
+    | User dn used for user authentication.
+    | This is the distinguished name of a user that will authenticate to
+    | the directory using a BIND. Typically named 'dn'
+    |--------------------------------------------------------------------------
+    */
 
-		'userdn'     => 'dn',
+    'userdn'     => 'dn',
 
-		'searchscope' => 'SUBTREE_SCOPE',
+    'searchscope' => 'SUBTREE_SCOPE',
 
-		'attributes' => array(
-			'uid',
-			'displayName',
-			'sn',
-			'givenName',
-			'mail',
-			'edupersonAffiliation',
-			'supannAffectation',
-			'login',
-		),
-	),
+    'attributes' => array(
+        'uid',
+        'displayName',
+        'sn',
+        'givenName',
+        'mail',
+        'edupersonAffiliation',
+        'supannAffectation',
+        'login',
+    )
 );
