@@ -19,7 +19,7 @@ class LdapServiceProvider extends ServiceProvider {
 	public function boot()
 	{
 		$this->publishes([
-            __DIR__.'/../../config/ldap.php' => config_path('ldap.php'),
+            __DIR__ . '/config/ldap.php' => config_path('ldap.php'),
         ]);
 	}
 

@@ -96,7 +96,7 @@ return array(
 
     'searchscope' => 'SUBTREE_SCOPE',
 
-    'attributes' => array(
+    'attributes' => [
         'uid',
         'displayName',
         'sn',
@@ -105,5 +105,18 @@ return array(
         'edupersonAffiliation',
         'supannAffectation',
         'login',
-    )
+    ],
+
+    'username_attribute' => ['login' => 'login'],
+
+    'password_key' => 'password',
+
+    'login_fallback' => false,
+
+    'sync_attributes' => [
+        'name' => 'displayname'
+    ],
+
+    'bind_user_to_model' => false,
+
 );

@@ -134,10 +134,12 @@ class Directory {
 
 		$user = static::query('people', [$login])->get($this->getConfig('userdn'));
 
-		if(ldap_bind($this->connection->getResource(), $user, $password)) {
+		try {
+			ldap_bind($this->connection->getResource(), $user, $password);
 			return true;
+		} catch(\ErrorException $e) {
+			return false;
 		}
-		return false;
 	}
 
 	/**
