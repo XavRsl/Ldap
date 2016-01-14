@@ -1,6 +1,6 @@
 <?php
 
-return array(
+return [
 
     /*
     |--------------------------------------------------------------------------
@@ -94,7 +94,14 @@ return array(
 
     'userdn'     => 'dn',
 
-    'searchscope' => 'SUBTREE_SCOPE',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ldap Attributes to retrieve
+    |--------------------------------------------------------------------------
+    | Any attribute that you want to retrieve MUST be specified in the
+    | 'attributes' array.
+    */
 
     'attributes' => [
         'uid',
@@ -107,16 +114,49 @@ return array(
         'login',
     ],
 
-    'username_attribute' => ['login' => 'login'],
+    /*
+    |--------------------------------------------------------------------------
+    | Map LDAP auth attribute to input
+    |--------------------------------------------------------------------------
+    |
+    | ['myLoginInputFieldName' => 'myLdapAttribute']
+    */
+
+    'username_attribute' => [
+        'username' => 'login'
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Password Input Field Name
+    |--------------------------------------------------------------------------
+    */
 
     'password_key' => 'password',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Do you want to fallback to local app login system
+    |--------------------------------------------------------------------------
+    */
+
     'login_fallback' => false,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Map Eloquent fields to LDAP attributes
+    |--------------------------------------------------------------------------
+    */
 
     'sync_attributes' => [
         'name' => 'displayname'
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Do you want to bind user to model (can slow every app request)
+    |--------------------------------------------------------------------------
+    */
     'bind_user_to_model' => false,
 
-);
+];

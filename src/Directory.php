@@ -167,7 +167,7 @@ class Directory {
 		// Make a directory query only if the info is not already in cache.
 		if(!empty($this->requestedEntries))
 		{
-			$directoryEntries = $this->setEntriesFromDirectory();
+			$this->setEntriesFromDirectory();
 		}
 
 		// if no attributes are supplied, use all from config 'attributes' setting

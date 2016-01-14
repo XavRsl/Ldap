@@ -3,10 +3,10 @@ LDAP package for Laravel 5.x
 
 This package is an attempt to provide a way to search through an Ldap Directory like you would query a database with Eloquent.
 
-It now also comes with a AuthUserProvider so that you can hook it in as a AuthProvider for your Laravel. In order to accomplish that, I have stolen very large pieces of this great package :
+It now also comes with a AuthUserProvider so that you can hook it in as a AuthProvider for your Laravel app. In order to accomplish that, I have stolen very large pieces of this great package :
 [Adldap2/Adldap2-Laravel](https://github.com/Adldap2/Adldap2-Laravel/)
 
-The only reason why I'm not using Adldap2-Laravel for my projects is because it doesn't support OpenLdap yet, so if you use ActiveDirectory, go check it out !
+The only reason why I'm not using **Adldap2-Laravel** for my projects is because it doesn't support OpenLdap yet, so if you use ActiveDirectory, go check it out !
 
 
 
@@ -14,7 +14,7 @@ Installing
 ----------
 Require it from your command line :
 
-```javascript
+```bash
 composer require xavrsl/ldap
 ```
 
@@ -30,7 +30,7 @@ Add the facade to the alias array (also in config/app):
 'Ldap' => Xavrsl\Ldap\Facades\Ldap::class,
 ```
 
-You then need to publish and customize the config file to indicate the location of your ldap server and also set your dn, attributes etc.
+You then need to publish and customize the config file to indicate the location of your ldap server and also set your dn, attributes etc. :
 
 ```
 php artisan vendor:publish
