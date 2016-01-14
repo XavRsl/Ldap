@@ -1,36 +1,39 @@
-LDAP package for Laravel 4.x
-===========================
+LDAP package for Laravel 5.x
+============================
 
-This composer package is an attempt to provide a way to search through an Ldap Directory like you would query a database with Eloquent.
+This package is an attempt to provide a way to search through an Ldap Directory like you would query a database with Eloquent.
+
+It now also comes with a AuthUserProvider so that you can hook it in as a AuthProvider for your Laravel. In order to accomplish that, I have stolen very large pieces of this great package :
+[Adldap2/Adldap2-Laravel](https://github.com/Adldap2/Adldap2-Laravel/)
+
+The only reason why I'm not using Adldap2-Laravel for my projects is because it doesn't support OpenLdap yet, so if you use ActiveDirectory, go check it out !
+
+
 
 Installing
 ----------
-Declare a dependency on this package in your composer.json file:
+Require it from your command line :
 
 ```javascript
-"require": {
-	"xavrsl/ldap": "v1.4"
-},
+composer require xavrsl/ldap
 ```
-
-Next, run **composer update** to pull in the code.
 
 Add the service provider to config/app :
 
 ```php
-'Xavrsl\Ldap\LdapServiceProvider',
+Xavrsl\Ldap\LdapServiceProvider::class,
 ```
 
 Add the facade to the alias array (also in config/app):
 
 ```php
-'Ldap' => 'Xavrsl\Ldap\Facades\Ldap',
+'Ldap' => Xavrsl\Ldap\Facades\Ldap::class,
 ```
 
 You then need to publish and customize the config file to indicate the location of your ldap server and also set your dn, attributes etc.
 
 ```
-php artisan config:publish xavrsl/ldap
+php artisan vendor:publish
 ```
 
 You're now ready to use this package !
@@ -38,7 +41,7 @@ You're now ready to use this package !
 Usage
 -----
 First remember to set ALL your config parameters. All sections have been well documented in the comments.
-Any attribute that you want to retrieve MUST be specified in the 'attributes' array.
+Any attribute that you want to retrieve MUST be specified in the 'attributes' array. This may seem strange but the reason I built this package was because I needed a way to query an LDAP Directory every two seconds on a big list of users. So I needed Caching. The only way I was able to cache all the fields was by providing a retrieved attributes array.
 
 - Return an attribute from one member of your organisation :
 ```php
