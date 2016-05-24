@@ -2,7 +2,7 @@
     "name": "xavrsl/ldap",
     "description": "Add Ldap Search possibilities to Laravel",
     "keywords": ["laravel", "ldap", "search"],
-		"license": "MIT",
+	"license": "MIT",
     "authors": [
         {
             "name": "Xavier Roussel",
@@ -14,19 +14,9 @@
         "ext-ldap": "*",
         "illuminate/support": "~5.0"
     },
-		"require-dev": {
-	      "orchestra/testbench": "2.1.*"
-	  },
-		"repositories": [
-        {
-            "type": "vcs",
-            "url": "git://github.com/orchestral/phpseclib.git"
-        }
-    ],
     "autoload": {
         "psr-0": {
             "Xavrsl\\Ldap": "src/"
         }
-    },
-    "minimum-stability": "stable"
+    }
 }
